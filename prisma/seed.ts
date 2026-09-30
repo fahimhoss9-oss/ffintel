@@ -33,15 +33,23 @@ function updateData<T extends WithId>(row: T): Omit<T, "id"> {
 async function main() {
   // Skip when the database already has content (e.g. on redeploys), so that
   // content edited through the admin panel is never overwritten by demo data.
-  const existingGames = await prisma.game.count();
-  if (existingGames > 0) {
+  // NOTE: this must check the LAST entity the seed writes (tournaments), not
+  // the first — a previously interrupted seed may have left partial data,
+  // which must be completed by re-running the (idempotent) upserts below.
+  const existingTournaments = await prisma.tournament.count();
+  if (existingTournaments > 0) {
     console.log("Database already contains data - skipping seed.");
     return;
   }
 
   // --- Game ----------------------------------------------------------------
+  // All-or-nothing: the whole seed runs inside one transaction, so a failure
+  // rolls everything back instead of leaving partial data behind. The next
+  // deploy then cleanly re-runs the full seed.
+  await prisma.$transaction(
+    async (tx) => {
   const { id: _gameId, ...gameUpdate } = demoGame;
-  await prisma.game.upsert({
+  await tx.game.upsert({
     where: { slug: demoGame.slug },
     create: { ...demoGame },
     update: gameUpdate,
@@ -49,7 +57,7 @@ async function main() {
 
   // --- Game versions --------------------------------------------------------
   for (const v of demoVersions) {
-    await prisma.gameVersion.upsert({
+    await tx.gameVersion.upsert({
       where: { gameId_version: { gameId: v.gameId, version: v.version } },
       create: { ...v },
       update: updateData(v),
@@ -58,7 +66,7 @@ async function main() {
 
   // --- Sources ---------------------------------------------------------------
   for (const s of demoSources) {
-    await prisma.source.upsert({
+    await tx.source.upsert({
       where: { id: s.id },
       create: { ...s },
       update: updateData(s),
@@ -68,14 +76,14 @@ async function main() {
   // --- Weapons + per-patch stats ----------------------------------------------
   for (const w of demoWeapons) {
     const { stats, ...weapon } = w;
-    await prisma.weapon.upsert({
+    await tx.weapon.upsert({
       where: { gameId_slug: { gameId: weapon.gameId, slug: weapon.slug } },
       create: { ...weapon },
       update: updateData(weapon),
     });
     for (const st of stats) {
       const { gameVersion: _gv, ...stat } = st;
-      await prisma.weaponStat.upsert({
+      await tx.weaponStat.upsert({
         where: {
           weaponId_gameVersionId: {
             weaponId: stat.weaponId,
@@ -91,20 +99,20 @@ async function main() {
   // --- Maps + locations + loot -------------------------------------------------
   for (const m of demoMaps) {
     const { locations, ...map } = m;
-    await prisma.map.upsert({
+    await tx.map.upsert({
       where: { gameId_slug: { gameId: map.gameId, slug: map.slug } },
       create: { ...map },
       update: updateData(map),
     });
     for (const loc of locations) {
       const { loot, ...location } = loc;
-      await prisma.mapLocation.upsert({
+      await tx.mapLocation.upsert({
         where: { mapId_slug: { mapId: location.mapId, slug: location.slug } },
         create: { ...location },
         update: updateData(location),
       });
       for (const l of loot) {
-        await prisma.loot.upsert({
+        await tx.loot.upsert({
           where: { id: l.id },
           create: { ...l },
           update: updateData(l),
@@ -116,13 +124,13 @@ async function main() {
   // --- Characters + abilities ----------------------------------------------------
   for (const c of demoCharacters) {
     const { abilities, ...character } = c;
-    await prisma.character.upsert({
+    await tx.character.upsert({
       where: { gameId_slug: { gameId: character.gameId, slug: character.slug } },
       create: { ...character },
       update: updateData(character),
     });
     for (const a of abilities) {
-      await prisma.characterAbility.upsert({
+      await tx.characterAbility.upsert({
         where: { id: a.id },
         create: { ...a },
         update: updateData(a),
@@ -132,7 +140,7 @@ async function main() {
 
   // --- Esports: teams, players, tournaments ---------------------------------------
   for (const t of demoTeams) {
-    await prisma.team.upsert({
+    await tx.team.upsert({
       where: { gameId_slug: { gameId: t.gameId, slug: t.slug } },
       create: { ...t },
       update: updateData(t),
@@ -140,7 +148,7 @@ async function main() {
   }
 
   for (const p of demoPlayers) {
-    await prisma.player.upsert({
+    await tx.player.upsert({
       where: { id: p.id },
       create: { ...p },
       update: updateData(p),
@@ -148,12 +156,15 @@ async function main() {
   }
 
   for (const tr of demoTournaments) {
-    await prisma.tournament.upsert({
+    await tx.tournament.upsert({
       where: { gameId_slug: { gameId: tr.gameId, slug: tr.slug } },
       create: { ...tr },
       update: updateData(tr),
     });
   }
+    },
+    { maxWait: 15000, timeout: 120000 },
+  );
 
   console.log("Seed complete: game, versions, sources, weapons, maps, characters, esports.");
 }

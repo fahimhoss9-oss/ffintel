@@ -705,7 +705,7 @@ export const demoMaps: MapWithLocations[] = [
       schematicLocation(
         "map-nexterra", "loc-nexterra-grav-labs", "Grav Labs", "grav-labs", 50, 40, "landmark",
         "High-tech laboratory complex.",
-        [demoLoot("loot-nexterra-gravlabs-1", "loc-nexterra-gravlabs", "special", "high", "High-tech loot spawns around the labs")],
+        [demoLoot("loot-nexterra-gravlabs-1", "loc-nexterra-grav-labs", "special", "high", "High-tech loot spawns around the labs")],
       ),
       schematicLocation(
         "map-nexterra", "loc-nexterra-museum", "Museum", "museum", 45, 55, "landmark",
@@ -753,7 +753,7 @@ export const demoMaps: MapWithLocations[] = [
       schematicLocation(
         "map-solara", "loc-solara-slide-central", "Slide Central", "slide-central", 50, 45, "landmark",
         "Central hub of the slide track system.",
-        [demoLoot("loot-solara-slidecentral-1", "loc-solara-slidecentral", "weapon", "high", "Central hub loot; strong early-game weapons")],
+        [demoLoot("loot-solara-slidecentral-1", "loc-solara-slide-central", "weapon", "high", "Central hub loot; strong early-game weapons")],
       ),
       schematicLocation(
         "map-solara", "loc-solara-coastline", "Coastline", "coastline", 66, 55, "landmark",
