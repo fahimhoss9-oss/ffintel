@@ -1,0 +1,570 @@
+// =============================================================================
+// Database schema — Free Fire Gaming Intelligence & Esports Platform
+// Multi-game ready: all content is scoped to a Game. Free Fire is game #1.
+// Data-integrity rules enforced by design:
+//   - Every factual record links to a Source (who said it) and, where it
+//     makes sense, a GameVersion (which patch it applies to).
+//   - weapon_stats keeps ONE ROW PER (weapon, patch) so history is preserved,
+//     never overwritten.
+//   - verifiedStatus defaults to UNVERIFIED; the UI must hide or clearly
+//     label anything not verified. Demo/placeholder rows use isDemo = true.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  VERIFIED
+  DISPUTED
+  OUTDATED
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum TournamentStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum StreamStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+}
+
+// -----------------------------------------------------------------------------
+// Games & versions
+// -----------------------------------------------------------------------------
+
+model Game {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  shortName   String?
+  description String?
+  logoUrl     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  versions    GameVersion[]
+  weapons     Weapon[]
+  attachments WeaponAttachment[]
+  maps        Map[]
+  characters  Character[]
+  items       Item[]
+  teams       Team[]
+  players     Player[]
+  tournaments Tournament[]
+  news        News[]
+  guides      Guide[]
+}
+
+model GameVersion {
+  id          String    @id @default(cuid())
+  gameId      String
+  game        Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  version     String // e.g. "OB55"
+  title       String?
+  releaseDate DateTime?
+  notes       String? // patch-notes summary (original wording, not copied)
+  isCurrent   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  weaponStats WeaponStat[]
+  abilities   CharacterAbility[]
+  loot        Loot[]
+  news        News[]
+  guides      Guide[]
+
+  @@unique([gameId, version])
+}
+
+// -----------------------------------------------------------------------------
+// Provenance — every fact points here
+// -----------------------------------------------------------------------------
+
+model Source {
+  id          String   @id @default(cuid())
+  name        String
+  url         String?
+  type        String? // official | wiki | news | community | admin
+  collectedAt DateTime @default(now())
+  notes       String?
+
+  weapons      Weapon[]
+  weaponStats  WeaponStat[]
+  maps         Map[]
+  mapLocations MapLocation[]
+  loot         Loot[]
+  characters   Character[]
+  items        Item[]
+  teams        Team[]
+  players      Player[]
+  tournaments  Tournament[]
+  matches      Match[]
+  news         News[]
+  guides       Guide[]
+}
+
+// -----------------------------------------------------------------------------
+// Weapons
+// -----------------------------------------------------------------------------
+
+model Weapon {
+  id             String             @id @default(cuid())
+  gameId         String
+  game           Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  slug           String
+  name           String
+  category       String // AR | SMG | Shotgun | Sniper | DMR | LMG | Pistol | Melee | Launcher | Special
+  description    String?
+  iconUrl        String? // original SVG icon — never copied game art
+  isDemo         Boolean            @default(false)
+  sourceId       String?
+  source         Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  stats       WeaponStat[]
+  attachments WeaponAttachmentLink[]
+
+  @@unique([gameId, slug])
+}
+
+model WeaponStat {
+  id               String             @id @default(cuid())
+  weaponId         String
+  weapon           Weapon             @relation(fields: [weaponId], references: [id], onDelete: Cascade)
+  gameVersionId    String
+  gameVersion      GameVersion        @relation(fields: [gameVersionId], references: [id], onDelete: Cascade)
+  damage           Float?
+  headshotDamage   Float?
+  bodyDamage       Float?
+  limbDamage       Float?
+  fireRate         Float? // rounds per minute
+  magazine         Int?
+  reloadTime       Float? // seconds
+  range            Float? // effective range, meters
+  accuracy         Float?
+  armorPenetration Float?
+  movementSpeed    Float? // multiplier, e.g. 0.95
+  ammoType         String?
+  notes            String?
+  isDemo           Boolean            @default(false)
+  sourceId         String?
+  source           Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus   VerificationStatus @default(UNVERIFIED)
+  verifiedAt       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@unique([weaponId, gameVersionId])
+}
+
+model WeaponAttachment {
+  id          String                 @id @default(cuid())
+  gameId      String
+  game        Game                   @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  name        String
+  slot        String // muzzle | grip | magazine | stock | scope
+  description String?
+  weapons     WeaponAttachmentLink[]
+
+  @@unique([gameId, name, slot])
+}
+
+model WeaponAttachmentLink {
+  weaponId     String
+  weapon       Weapon           @relation(fields: [weaponId], references: [id], onDelete: Cascade)
+  attachmentId String
+  attachment   WeaponAttachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+
+  @@id([weaponId, attachmentId])
+}
+
+// -----------------------------------------------------------------------------
+// Maps, locations, loot
+// -----------------------------------------------------------------------------
+
+model Map {
+  id             String             @id @default(cuid())
+  gameId         String
+  game           Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  slug           String
+  name           String
+  description    String?
+  theme          String?
+  imageUrl       String? // schematic/illustrative unless licensed art is provided
+  imageCredit    String?
+  isDemo         Boolean            @default(false)
+  sourceId       String?
+  source         Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  locations MapLocation[]
+
+  @@unique([gameId, slug])
+}
+
+model MapLocation {
+  id             String             @id @default(cuid())
+  mapId          String
+  map            Map                @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String
+  x              Float // 0–100 coordinate on the schematic map
+  y              Float // 0–100 coordinate on the schematic map
+  type           String // hot_drop | town | compound | landmark | ...
+  description    String?
+  isDemo         Boolean            @default(false)
+  sourceId       String?
+  source         Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  loot Loot[]
+
+  @@unique([mapId, slug])
+}
+
+model Loot {
+  id             String             @id @default(cuid())
+  mapLocationId  String
+  location       MapLocation        @relation(fields: [mapLocationId], references: [id], onDelete: Cascade)
+  gameVersionId  String?
+  gameVersion    GameVersion?       @relation(fields: [gameVersionId], references: [id])
+  category       String // weapon | armor | ammo | healing | attachment | special
+  tier           String // high | medium | low
+  details        String?
+  isDemo         Boolean            @default(false)
+  sourceId       String?
+  source         Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// Characters & items
+// -----------------------------------------------------------------------------
+
+model Character {
+  id             String             @id @default(cuid())
+  gameId         String
+  game           Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  slug           String
+  name           String
+  role           String?
+  description    String?
+  imageUrl       String?
+  isDemo         Boolean            @default(false)
+  sourceId       String?
+  source         Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  abilities CharacterAbility[]
+
+  @@unique([gameId, slug])
+}
+
+model CharacterAbility {
+  id            String       @id @default(cuid())
+  characterId   String
+  character     Character    @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  name          String
+  type          String // active | passive
+  description   String?
+  gameVersionId String?
+  gameVersion   GameVersion? @relation(fields: [gameVersionId], references: [id])
+  isDemo        Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Item {
+  id             String             @id @default(cuid())
+  gameId         String
+  game           Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  slug           String
+  name           String
+  category       String // equipment | consumable | attachment | special
+  description    String?
+  imageUrl       String?
+  isDemo         Boolean            @default(false)
+  sourceId       String?
+  source         Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([gameId, slug])
+}
+
+// -----------------------------------------------------------------------------
+// Esports: teams, players, tournaments, matches, streams
+// -----------------------------------------------------------------------------
+
+model Team {
+  id             String             @id @default(cuid())
+  gameId         String
+  game           Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  slug           String
+  name           String
+  region         String?
+  country        String?
+  logoUrl        String?
+  description    String?
+  websiteUrl     String?
+  isDemo         Boolean            @default(false)
+  sourceId       String?
+  source         Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  players         Player[]
+  tournamentTeams TournamentTeam[]
+  matchResults    MatchResult[]
+
+  @@unique([gameId, slug])
+}
+
+model Player {
+  id             String             @id @default(cuid())
+  gameId         String
+  game           Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  teamId         String?
+  team           Team?              @relation(fields: [teamId], references: [id])
+  ign            String // in-game name
+  realName       String?
+  role           String?
+  country        String?
+  description    String?
+  isDemo         Boolean            @default(false)
+  sourceId       String?
+  source         Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model Tournament {
+  id             String             @id @default(cuid())
+  gameId         String
+  game           Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  slug           String
+  name           String
+  region         String?
+  organizer      String?
+  format         String?
+  startDate      DateTime?
+  endDate        DateTime?
+  prizePool      String?
+  status         TournamentStatus   @default(UPCOMING)
+  officialUrl    String?
+  streamUrl      String?
+  description    String?
+  isDemo         Boolean            @default(false)
+  sourceId       String?
+  source         Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  teams      TournamentTeam[]
+  matches    Match[]
+  livestreams Livestream[]
+
+  @@unique([gameId, slug])
+}
+
+model TournamentTeam {
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamId       String
+  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  placement    Int?
+  points       Int?
+  prize        String?
+
+  @@id([tournamentId, teamId])
+}
+
+model Match {
+  id             String             @id @default(cuid())
+  tournamentId   String
+  tournament     Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  name           String?
+  scheduledAt    DateTime?
+  status         MatchStatus        @default(SCHEDULED)
+  streamUrl      String?
+  isDemo         Boolean            @default(false)
+  sourceId       String?
+  source         Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  results MatchResult[]
+}
+
+model MatchResult {
+  id        String @id @default(cuid())
+  matchId   String
+  match     Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  teamId    String
+  team      Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  placement Int?
+  kills     Int?
+  points    Int?
+
+  @@unique([matchId, teamId])
+}
+
+model Livestream {
+  id           String       @id @default(cuid())
+  tournamentId String?
+  tournament   Tournament?  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  title        String
+  platform     String       @default("youtube")
+  embedUrl     String // official embed URL only — never re-hosted content
+  status       StreamStatus @default(SCHEDULED)
+  scheduledAt  DateTime?
+  isDemo       Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// Content: news & guides
+// -----------------------------------------------------------------------------
+
+model News {
+  id             String             @id @default(cuid())
+  gameId         String
+  game           Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gameVersionId  String?
+  gameVersion    GameVersion?       @relation(fields: [gameVersionId], references: [id])
+  slug           String
+  title          String
+  excerpt        String?
+  body           String?
+  imageUrl       String?
+  publishedAt    DateTime?
+  sourceId       String?
+  source         Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([gameId, slug])
+}
+
+model Guide {
+  id             String             @id @default(cuid())
+  gameId         String
+  game           Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gameVersionId  String?
+  gameVersion    GameVersion?       @relation(fields: [gameVersionId], references: [id])
+  slug           String
+  title          String
+  excerpt        String?
+  body           String?
+  imageUrl       String?
+  publishedAt    DateTime?
+  sourceId       String?
+  source         Source?            @relation(fields: [sourceId], references: [id])
+  verifiedStatus VerificationStatus @default(UNVERIFIED)
+  verifiedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([gameId, slug])
+}
+
+// -----------------------------------------------------------------------------
+// Users, favorites, follows, audit
+// -----------------------------------------------------------------------------
+
+model User {
+  id        String   @id // Supabase Auth user id
+  email     String?  @unique
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  favorites Favorite[]
+  follows   Follow[]
+  auditLogs AuditLog[]
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entityType String // weapon | map | team | player | tournament | guide
+  entityId   String
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, entityType, entityId])
+}
+
+model Follow {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entityType String // team | player | tournament
+  entityId   String
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, entityType, entityId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String // create | update | delete | verify | import
+  entityType String
+  entityId   String
+  details    String?
+  createdAt  DateTime @default(now())
+}

@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-arena-950: #07090d;
+  --color-arena-900: #0b0e14;
+  --color-arena-850: #10141c;
+  --color-arena-800: #151b25;
+  --color-arena-700: #1e2634;
+  --color-arena-600: #2a3448;
+  --color-accent-400: #ffb020;
+  --color-accent-500: #f59e0b;
+  --color-accent-600: #d97706;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-arena-950);
+  color: #e4e7ee;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Leaflet dark-theme tweaks */
+.leaflet-container {
+  background: var(--color-arena-900);
+  font-family: var(--font-sans);
+  outline: none;
+}
+.leaflet-control-zoom a,
+.leaflet-bar a {
+  background: var(--color-arena-800) !important;
+  color: #e4e7ee !important;
+  border-color: var(--color-arena-700) !important;
+}
+.leaflet-control-attribution {
+  background: rgba(7, 9, 13, 0.7) !important;
+  color: #6b7280 !important;
+  font-size: 10px !important;
+}
+.leaflet-control-attribution a {
+  color: #9ca3af !important;
+}
+.leaflet-popup-content-wrapper {
+  background: var(--color-arena-800);
+  color: #e4e7ee;
+  border-radius: 10px;
+}
+.leaflet-popup-tip {
+  background: var(--color-arena-800);
+}
