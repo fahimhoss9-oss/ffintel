@@ -31,6 +31,14 @@ function updateData<T extends WithId>(row: T): Omit<T, "id"> {
 }
 
 async function main() {
+  // Skip when the database already has content (e.g. on redeploys), so that
+  // content edited through the admin panel is never overwritten by demo data.
+  const existingGames = await prisma.game.count();
+  if (existingGames > 0) {
+    console.log("Database already contains data - skipping seed.");
+    return;
+  }
+
   // --- Game ----------------------------------------------------------------
   const { id: _gameId, ...gameUpdate } = demoGame;
   await prisma.game.upsert({
