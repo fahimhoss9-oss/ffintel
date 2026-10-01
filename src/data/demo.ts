@@ -224,7 +224,7 @@ function officialWeapon(
     name,
     category,
     description,
-    iconUrl: null,
+    iconUrl: `/icons/weapons/${slug}.svg`,
     isDemo: false,
     sourceId: "src-garena-weapons",
     verifiedStatus: verified ? "VERIFIED" : "UNVERIFIED",
@@ -246,7 +246,7 @@ export const demoWeapons: WeaponWithStats[] = [
     category: "Shotgun",
     description:
       "Lever-action shotgun known for very high close-range burst damage.",
-    iconUrl: null,
+    iconUrl: "/icons/weapons/m1887.svg",
     isDemo: true,
     sourceId: "src-garena-weapons",
     verifiedStatus: "UNVERIFIED",

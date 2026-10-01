@@ -12,6 +12,7 @@ import {
 } from "@/components/ui";
 import { calculateDPS, calculateTTK, effectiveDamage } from "@/lib/calculators";
 import { currentStat, calcInputs } from "../weapon-utils";
+import { WeaponIcon } from "@/components/WeaponIcon";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,12 @@ export default async function WeaponDetailPage(props: PageProps<"/weapons/[slug]
       </Link>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
+        <WeaponIcon
+          slug={weapon.slug}
+          iconUrl={weapon.iconUrl}
+          name={weapon.name}
+          className="h-16 w-16 shrink-0 text-accent-500"
+        />
         <h1 className="text-2xl font-bold tracking-tight text-zinc-50 sm:text-3xl">
           {weapon.name}
         </h1>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { getWeapons } from "@/lib/data";
 import { Card, SectionTitle, StatusBadge, EmptyState } from "@/components/ui";
+import { WeaponIcon } from "@/components/WeaponIcon";
 import { sortCategories } from "./weapon-utils";
 
 export const dynamic = "force-dynamic";
@@ -106,11 +107,21 @@ export default async function WeaponsPage(props: PageProps<"/weapons">) {
               {g.items.map((w) => (
                 <Link key={w.id} href={`/weapons/${w.slug}`} className="block">
                   <Card className="h-full p-4 transition hover:ring-accent-500/50">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-bold text-zinc-100">{w.name}</h3>
-                      <StatusBadge status={w.verifiedStatus} isDemo={w.isDemo} />
+                    <div className="flex items-center gap-3">
+                      <WeaponIcon
+                        slug={w.slug}
+                        iconUrl={w.iconUrl}
+                        name={w.name}
+                        className="h-14 w-14 shrink-0 text-accent-500"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-bold text-zinc-100">{w.name}</h3>
+                          <StatusBadge status={w.verifiedStatus} isDemo={w.isDemo} />
+                        </div>
+                        <p className="mt-1 text-xs font-medium text-zinc-500">{w.category}</p>
+                      </div>
                     </div>
-                    <p className="mt-1 text-xs font-medium text-zinc-500">{w.category}</p>
                     {w.description && (
                       <p className="mt-2 line-clamp-2 text-sm text-zinc-400">{w.description}</p>
                     )}

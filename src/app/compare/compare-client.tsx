@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { WeaponWithStats } from "@/data/demo";
 import { calculateDPS, calculateTTK } from "@/lib/calculators";
 import { Card, StatusBadge, EmptyState, CalculatedNote } from "@/components/ui";
+import { WeaponIcon } from "@/components/WeaponIcon";
 import { calcInputs, currentStat } from "../weapons/weapon-utils";
 
 const TARGET_HP = 200;
@@ -175,6 +176,12 @@ export function CompareClient({
                   {picked.map((w) => (
                     <th key={w.id} className="min-w-[120px] px-3 py-3 text-center">
                       <Link href={`/weapons/${w.slug}`} className="hover:text-accent-400">
+                        <WeaponIcon
+                          slug={w.slug}
+                          iconUrl={w.iconUrl}
+                          name={w.name}
+                          className="mx-auto mb-1 h-10 w-10 text-accent-500"
+                        />
                         <span className="block font-bold text-zinc-100">{w.name}</span>
                       </Link>
                       <span className="mt-1 flex items-center justify-center gap-1.5">
