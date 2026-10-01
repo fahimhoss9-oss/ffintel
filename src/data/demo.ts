@@ -38,6 +38,15 @@ export const demoSources: Source[] = [
       "Official weapon roster, categories, descriptions and magazine capacities.",
   },
   {
+    id: "src-ff-wiki",
+    name: "Free Fire Fandom Wiki",
+    url: "https://freefire.fandom.com/wiki/Weapons",
+    type: "wiki",
+    collectedAt: new Date("2026-10-01"),
+    notes:
+      "Community-maintained wiki. Used for weapon names and categories only — numeric stats are not sourced from here and remain unverified until an official source exists.",
+  },
+  {
     id: "src-garena-maps",
     name: "Garena Free Fire — Official Maps Page",
     url: "https://ff.garena.com/en/maps/",
@@ -235,6 +244,33 @@ function officialWeapon(
   };
 }
 
+/** Builds a community-sourced weapon entry from the Free Fire Fandom wiki.
+ *  Name + category only — description and numeric stats stay empty until a
+ *  citable source exists. Always UNVERIFIED. */
+function wikiWeapon(
+  id: string,
+  slug: string,
+  name: string,
+  category: string,
+): WeaponWithStats {
+  return {
+    id,
+    gameId: demoGame.id,
+    slug,
+    name,
+    category,
+    description: null,
+    iconUrl: `/icons/weapons/${slug}.svg`,
+    isDemo: false,
+    sourceId: "src-ff-wiki",
+    verifiedStatus: "UNVERIFIED",
+    verifiedAt: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+    stats: [],
+  };
+}
+
 export const demoWeapons: WeaponWithStats[] = [
   // Placeholder example: numeric stats not citable, so everything stays
   // demo/unverified except the well-known 2-round magazine.
@@ -390,6 +426,36 @@ export const demoWeapons: WeaponWithStats[] = [
     75,
     true,
   ),
+  // --- Community-sourced roster (Free Fire Fandom Wiki, UNVERIFIED) -----------
+  // Categories normalized to this app's existing taxonomy: Assault Rifle -> Rifle,
+  // Sniper Rifle -> Sniper, Light Machine Gun -> Machine Gun.
+  wikiWeapon("wpn-ak", "ak", "AK", "Rifle"),
+  wikiWeapon("wpn-an94", "an94", "AN94", "Rifle"),
+  wikiWeapon("wpn-aug", "aug", "AUG", "Rifle"),
+  wikiWeapon("wpn-famas", "famas", "FAMAS", "Rifle"),
+  wikiWeapon("wpn-g36", "g36", "G36", "Rifle"),
+  wikiWeapon("wpn-groza", "groza", "GROZA", "Rifle"),
+  wikiWeapon("wpn-kingfisher", "kingfisher", "KINGFISHER", "Rifle"),
+  wikiWeapon("wpn-m14", "m14", "M14", "Rifle"),
+  wikiWeapon("wpn-m4a1", "m4a1", "M4A1", "Rifle"),
+  wikiWeapon("wpn-parafal", "parafal", "PARAFAL", "Rifle"),
+  wikiWeapon("wpn-plasma", "plasma", "PLASMA", "Rifle"),
+  wikiWeapon("wpn-scar", "scar", "SCAR", "Rifle"),
+  wikiWeapon("wpn-xm8", "xm8", "XM8", "Rifle"),
+  wikiWeapon("wpn-bizon", "bizon", "BIZON", "Sub-Machine Gun"),
+  wikiWeapon("wpn-mac10", "mac10", "MAC10", "Sub-Machine Gun"),
+  wikiWeapon("wpn-mp40", "mp40", "MP40", "Sub-Machine Gun"),
+  wikiWeapon("wpn-mp5", "mp5", "MP5", "Sub-Machine Gun"),
+  wikiWeapon("wpn-p90", "p90", "P90", "Sub-Machine Gun"),
+  wikiWeapon("wpn-thompson", "thompson", "THOMPSON", "Sub-Machine Gun"),
+  wikiWeapon("wpn-ump", "ump", "UMP", "Sub-Machine Gun"),
+  wikiWeapon("wpn-vector", "vector", "VECTOR", "Sub-Machine Gun"),
+  wikiWeapon("wpn-vss", "vss", "VSS", "Sub-Machine Gun"),
+  wikiWeapon("wpn-spas12", "spas12", "SPAS12", "Shotgun"),
+  wikiWeapon("wpn-awm", "awm", "AWM", "Sniper"),
+  wikiWeapon("wpn-m249", "m249", "M249", "Machine Gun"),
+  wikiWeapon("wpn-m60", "m60", "M60", "Machine Gun"),
+  wikiWeapon("wpn-svd", "svd", "SVD", "Marksman Rifle"),
 ];
 
 export type MapWithLocations = Map & {

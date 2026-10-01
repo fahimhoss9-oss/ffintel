@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma migrate deploy && prisma db seed && next build",
+    "build": "prisma generate && prisma migrate deploy && prisma db seed && tsx prisma/updates/sync-weapon-roster.ts && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
@@ -16,6 +16,7 @@
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
+    "db:sync-weapons": "tsx prisma/updates/sync-weapon-roster.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
